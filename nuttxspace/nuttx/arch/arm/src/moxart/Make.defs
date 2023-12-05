@@ -1,0 +1,42 @@
+############################################################################
+# arch/arm/src/moxart/Make.defs
+#
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.  The
+# ASF licenses this file to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance with the
+# License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+# License for the specific language governing permissions and limitations
+# under the License.
+#
+############################################################################
+
+HEAD_ASRC = moxart_head.S
+
+CMN_ASRCS  = arm_saveusercontext.S arm_fullcontextrestore.S arm_vectors.S
+CMN_ASRCS += arm_nommuhead.S vfork.S
+CMN_CSRCS  = arm_allocateheap.c arm_assert.c arm_blocktask.c arm_copyfullstate.c
+CMN_CSRCS += arm_createstack.c arm_dataabort.c arm_mdelay.c arm_udelay.c
+CMN_CSRCS += arm_exit.c arm_initialstate.c arm_initialize.c
+CMN_CSRCS += arm_interruptcontext.c arm_prefetchabort.c arm_releasepending.c
+CMN_CSRCS += arm_releasestack.c arm_reprioritizertr.c arm_schedulesigaction.c
+CMN_CSRCS += arm_sigdeliver.c arm_stackframe.c arm_syscall.c arm_unblocktask.c
+CMN_CSRCS += arm_undefinedinsn.c arm_usestack.c arm_vfork.c arm_etherstub.c
+CMN_CSRCS += arm_puts.c arm_tcbinfo.c arm_switchcontext.c
+
+CHIP_ASRCS  = moxart_lowputc.S
+
+CHIP_CSRCS  = moxart_16550.c moxart_irq.c moxart_timer.c moxart_systemreset.c
+
+# Configuration-dependent Kinetis K files
+
+ifneq ($(CONFIG_ARCH_IDLE_CUSTOM),y)
+CHIP_CSRCS += moxart_idle.c
+endif

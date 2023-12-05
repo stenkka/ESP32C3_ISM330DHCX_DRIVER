@@ -1,0 +1,41 @@
+builtin_list.c.Users.aaron.Ohjelmat.esp32.nuttxspace.apps.builtin.o: \
+ builtin_list.c \
+ /Users/aaron/Ohjelmat/esp32/nuttxspace/nuttx/include/nuttx/config.h \
+ /Users/aaron/Ohjelmat/esp32/nuttxspace/nuttx/include/nuttx/lib/builtin.h \
+ /Users/aaron/Ohjelmat/esp32/nuttxspace/nuttx/include/sys/types.h \
+ /Users/aaron/Ohjelmat/esp32/nuttxspace/nuttx/include/nuttx/compiler.h \
+ /Users/aaron/Ohjelmat/esp32/nuttxspace/nuttx/include/stdint.h \
+ /Users/aaron/Ohjelmat/esp32/nuttxspace/nuttx/include/arch/types.h \
+ /Users/aaron/Ohjelmat/esp32/nuttxspace/nuttx/include/arch/inttypes.h \
+ /Users/aaron/Ohjelmat/esp32/nuttxspace/nuttx/include/limits.h \
+ /Users/aaron/Ohjelmat/esp32/nuttxspace/nuttx/include/arch/limits.h \
+ builtin_proto.h builtin_list.h
+exec_builtin.c.Users.aaron.Ohjelmat.esp32.nuttxspace.apps.builtin.o: \
+ exec_builtin.c \
+ /Users/aaron/Ohjelmat/esp32/nuttxspace/nuttx/include/nuttx/config.h \
+ /Users/aaron/Ohjelmat/esp32/nuttxspace/nuttx/include/spawn.h \
+ /Users/aaron/Ohjelmat/esp32/nuttxspace/nuttx/include/sys/types.h \
+ /Users/aaron/Ohjelmat/esp32/nuttxspace/nuttx/include/nuttx/compiler.h \
+ /Users/aaron/Ohjelmat/esp32/nuttxspace/nuttx/include/stdint.h \
+ /Users/aaron/Ohjelmat/esp32/nuttxspace/nuttx/include/arch/types.h \
+ /Users/aaron/Ohjelmat/esp32/nuttxspace/nuttx/include/arch/inttypes.h \
+ /Users/aaron/Ohjelmat/esp32/nuttxspace/nuttx/include/limits.h \
+ /Users/aaron/Ohjelmat/esp32/nuttxspace/nuttx/include/arch/limits.h \
+ /Users/aaron/Ohjelmat/esp32/nuttxspace/nuttx/include/sched.h \
+ /Users/aaron/Ohjelmat/esp32/nuttxspace/nuttx/include/stdbool.h \
+ /Users/aaron/Ohjelmat/esp32/nuttxspace/nuttx/include/strings.h \
+ /Users/aaron/Ohjelmat/esp32/nuttxspace/nuttx/include/string.h \
+ /Users/aaron/Ohjelmat/esp32/nuttxspace/nuttx/include/stddef.h \
+ /Users/aaron/Ohjelmat/esp32/nuttxspace/nuttx/include/time.h \
+ /Users/aaron/Ohjelmat/esp32/nuttxspace/nuttx/include/queue.h \
+ /Users/aaron/Ohjelmat/esp32/nuttxspace/nuttx/include/signal.h \
+ /Users/aaron/Ohjelmat/esp32/nuttxspace/nuttx/include/fcntl.h \
+ /Users/aaron/Ohjelmat/esp32/nuttxspace/nuttx/include/errno.h \
+ /Users/aaron/Ohjelmat/esp32/nuttxspace/nuttx/include/debug.h \
+ /Users/aaron/Ohjelmat/esp32/nuttxspace/nuttx/include/syslog.h \
+ /opt/homebrew/Cellar/riscv-gnu-toolchain/main/lib/gcc/riscv64-unknown-elf/13.2.0/include/stdarg.h \
+ /Users/aaron/Ohjelmat/esp32/nuttxspace/nuttx/include/sys/uio.h \
+ /Users/aaron/Ohjelmat/esp32/nuttxspace/apps/include/builtin/builtin.h \
+ /Users/aaron/Ohjelmat/esp32/nuttxspace/nuttx/include/nuttx/lib/builtin.h
+# No files specified for dependency generation
+# No files specified for dependency generation

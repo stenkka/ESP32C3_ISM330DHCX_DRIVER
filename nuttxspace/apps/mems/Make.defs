@@ -1,0 +1,3 @@
+ifneq ($(CONFIG_MEMS_APP),)
+CONFIGURED_APPS += $(APPDIR)/mems
+endif

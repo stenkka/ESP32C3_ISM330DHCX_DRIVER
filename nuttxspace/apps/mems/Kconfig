@@ -1,0 +1,29 @@
+#
+# For a description of the syntax of this configuration file,
+# see the file kconfig-language.txt in the NuttX tools repository.
+#
+
+config MEMS_APP
+	tristate "MEMS app"
+	default n
+	---help---
+		Enable the \"MEMS app" app
+
+if MEMS_APP
+
+config MEMS_APP_PROGNAME
+	string "Program name"
+	default "MEMS_app"
+	---help---
+		This is the name of the program that will be used when the NSH ELF
+		program is installed.
+
+config MEMS_APP_PRIORITY
+	int "MEMS app task priority"
+	default 100
+
+config MEMS_APP_STACKSIZE
+	int "Hello stack size"
+	default DEFAULT_TASK_STACKSIZE
+
+endif

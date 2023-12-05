@@ -1,0 +1,4 @@
+dummy.c.Users.aaron.Ohjelmat.esp32.nuttxspace.apps.platform.o: \
+ board/dummy.c
+# No files specified for dependency generation
+# No files specified for dependency generation
