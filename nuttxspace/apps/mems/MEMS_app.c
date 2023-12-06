@@ -1,8 +1,9 @@
 #include <nuttx/config.h>
 #include <fcntl.h>
+#include <sys/ioctl.h>
 #include <stdio.h>
 #include <nuttx/sensors/ism330dhcx.h>
-
+#include <nuttx/sensors/ioctl.h>
 
 
 struct sensor_data
@@ -18,10 +19,12 @@ int main(int argc, FAR char *argv[])
   	printf("Running MEMS app\n");
 	
 	int ret, fd;
+	int c = 0;
 	struct sensor_data sample;	
 	fd = open("/dev/ism330dhcx", O_RDONLY); 
 	while(1)
 	{
+		c++;
 		ret = read(fd, &sample, sizeof(sample));
 		if(ret != sizeof(sample))
 		{
@@ -29,8 +32,13 @@ int main(int argc, FAR char *argv[])
 		}
 	printf("x_acc: %12d\n", sample.x_acc);
 	//printf("x_acc: %12d, %y_acc: %12d, z_acc: %12d, temp: %12d", sample.x_acc, sample.y_acc, sample.z_acc, sample.temperature);
-	usleep(500000);	
+	usleep(200000);
+	if (c == 15)
+	{	
+		// Set Acc ODR to 1.6Hz
+		ioctl(fd, SNIOC_SET_LOWPERF, 1);
+		ioctl(fd, SNIOC_SET_ACC_ODR, 1);
 	}
-	
+	}
 	return 0;
 }

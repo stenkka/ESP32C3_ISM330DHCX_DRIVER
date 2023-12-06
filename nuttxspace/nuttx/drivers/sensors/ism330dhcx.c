@@ -35,6 +35,7 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/sensors/ism330dhcx.h>
+#include <nuttx/sensors/ioctl.h>
 
 #if defined(CONFIG_SPI) && defined(CONFIG_SENSORS_ISM330DHCX)
 
@@ -605,14 +606,50 @@ static ssize_t ism330dhcx_write(
 static int ism330dhcx_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 {
 	int ret = OK;
+	uint8_t read_data = 0;
 
   	switch (cmd)
     {
-	// Accelerometer ODR (sampling rate)
-	case 1:
+	case SNIOC_SET_LOWPERF:
 		switch (arg)
 		{
-			
+		ism330dhcx_read_register(g_ism330dhcx_list, 0x15, &read_data);
+		case 1:
+			ism330dhcx_write_register(g_ism330dhcx_list, 0x15, 0x10 | read_data);
+			break;
+		case 0:
+			ism330dhcx_write_register(g_ism330dhcx_list, 0x15, ~0x10 & read_data);
+			break;
+		default:
+			snerr("ERROR: Unrecognized arg: %d\n", arg);
+			ret = -ENOTTY;
+			break;
+		}
+		break;
+	// Accelerometer ODR (sampling rate)
+	case SNIOC_SET_ACC_ODR:
+		switch (arg)
+		{
+		case 1:
+			ism330dhcx_write_register(g_ism330dhcx_list, 0x10, 0xB0);
+			sninfo("ioctl: Accelerometer ODR: 1.6Hz\n");
+			break;
+		case 52:
+			sninfo("ioctl: Accelerometer ODR: 52Hz\n");
+			ism330dhcx_write_register(g_ism330dhcx_list, 0x10, 0x30);
+			break;
+		case 833:
+			sninfo("ioctl: Accelerometer ODR: 833Hz\n");
+			ism330dhcx_write_register(g_ism330dhcx_list, 0x10, 0x70);
+			break;
+		case 6660:
+			sninfo("ioctl: Accelerometer ODR: 6.66kHz\n");
+			ism330dhcx_write_register(g_ism330dhcx_list, 0x10, 0xA0);
+			break;
+		default:
+			snerr("ERROR: Unrecognized arg: %d\n", arg);
+			ret = -ENOTTY;
+			break;
 		}
 		break;
 	/* Command was not recognized */

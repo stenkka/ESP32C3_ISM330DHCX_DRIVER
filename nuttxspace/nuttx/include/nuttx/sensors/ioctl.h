@@ -307,4 +307,23 @@
 
 #define SNIOC_SET_CALIBVALUE       _SNIOC(0x0087)
 
+/* Command:      SNIOC_SET_ACC_ODR
+* Description:  Set ODR (data rate) for accelerometer.
+* Argument:     Data rate.
+* Note:         If setting data rate failed, a negated errno va    lue is
+*               returned, otherwise, OK is returned.
+*/
+
+#define SNIOC_SET_ACC_ODR		   _SNIOC(0x0088)
+
+/* Command:      SNIOC_SET_LOWPERF
+* Description:  Set performance mode for accelerometer.
+* Argument:     1 (low performance mode) or 0 (high performance mode).
+* Note:         If setting data rate failed, a negated errno va    lue is
+*               returned, otherwise, OK is returned.
+*/
+
+#define SNIOC_SET_LOWPERF		   _SNIOC(0x0089)
+
+
 #endif /* __INCLUDE_NUTTX_SENSORS_IOCTL_H */
