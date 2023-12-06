@@ -604,16 +604,22 @@ static ssize_t ism330dhcx_write(
 
 static int ism330dhcx_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 {
-  int ret = OK;
+	int ret = OK;
 
-  switch (cmd)
+  	switch (cmd)
     {
-      /* Command was not recognized */
-
+	// Accelerometer ODR (sampling rate)
+	case 1:
+		switch (arg)
+		{
+			
+		}
+		break;
+	/* Command was not recognized */
     default:
-      snerr("ERROR: Unrecognized cmd: %d\n", cmd);
-      ret = -ENOTTY;
-      break;
+    	snerr("ERROR: Unrecognized cmd: %d\n", cmd);
+    	ret = -ENOTTY;
+    	break;
     }
 
   return ret;
@@ -732,6 +738,8 @@ int ism330dhcx_init()
 	/* Perform a reset */
  	ism330dhcx_reset(g_ism330dhcx_list);
 
+	sninfo("Configuration:\n");
+
   	ism330dhcx_write_register(g_ism330dhcx_list, 0x01, 0x00);
   	ism330dhcx_write_register(g_ism330dhcx_list, 0x02, 0x3F);
   	ism330dhcx_write_register(g_ism330dhcx_list, 0x07, 0xFF);
@@ -743,22 +751,27 @@ int ism330dhcx_init()
   	ism330dhcx_write_register(g_ism330dhcx_list, 0x0D, 0x00);
   	ism330dhcx_write_register(g_ism330dhcx_list, 0x0E, 0x00);
   	
-	// Accelerometer ODR (sampling frequency)
+	// Accelerometer ODR (sampling rate)
 		
+	
+
 	#ifdef CONFIG_ISM330DHCX_ACC_ODR__1_6
 	ism330dhcx_write_register(g_ism330dhcx_list, 0x10, 0xB0);
+	sninfo("Accelerometer ODR: 1.6Hz\n");
 	#endif
 
 	#ifdef CONFIG_ISM330DHCX_ACC_ODR__52
+	sninfo("Accelerometer ODR: 52Hz\n");
 	ism330dhcx_write_register(g_ism330dhcx_list, 0x10, 0x30);
 	#endif
 
 	#ifdef CONFIG_ISM330DHCX_ACC_ODR__833
+	sninfo("Accelerometer ODR: 833Hz\n");
 	ism330dhcx_write_register(g_ism330dhcx_list, 0x10, 0x70);
-  	sninfo("833 FREQ");
 	#endif
 
 	#ifdef CONFIG_ISM330DHCX_ACC_ODR__6660
+	sninfo("Accelerometer ODR: 6.66kHz\n");
 	ism330dhcx_write_register(g_ism330dhcx_list, 0x10, 0xA0);
 	#endif
 
@@ -785,7 +798,7 @@ int ism330dhcx_init()
   	ism330dhcx_write_register(g_ism330dhcx_list, 0x74, 0x00);
   	ism330dhcx_write_register(g_ism330dhcx_list, 0x75, 0x00);
 
-	sninfo("ism330dhcx initialized.\n");	
+	sninfo("ism330dhcx initialized\n");
 
 	return 0;
 }
