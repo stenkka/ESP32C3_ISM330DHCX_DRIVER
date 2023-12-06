@@ -34,6 +34,20 @@ config ISM330DHCX_ACC_ODR__6660
 endchoice
 
 choice
+        prompt "Gyroscope ODR (sampling frequency)"
+    default default_freq
+
+config ISM330DHCX_GYRO_ODR__1_6
+        bool "1.6Hz (low power only)"
+config ISM330DHCX_GYRO_ODR__52
+        bool "52Hz (low power)"
+config ISM330DHCX_GYRO_ODR__833
+        bool "833Hz (high performance)"
+config ISM330DHCX_GYRO_ODR__6660
+        bool "6.66kHz (high performance)"
+endchoice
+
+choice
  	prompt "Temperature sampling frequency"
   	default default_freq_temp
 
