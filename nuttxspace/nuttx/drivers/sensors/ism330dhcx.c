@@ -813,7 +813,6 @@ int ism330dhcx_init()
 	#endif
 
 	//Gyroscope ODR (sampling rate)
-	//
 	#ifdef CONFIG_ISM330DHCX_GYRO_ODR__1_6
         ism330dhcx_write_register(g_ism330dhcx_list, 0x11, 0xB0);
         sninfo("Gyroscope ODR: 1.6Hz\n");
@@ -836,7 +835,6 @@ int ism330dhcx_init()
 
 
 
-	ism330dhcx_write_register(g_ism330dhcx_list, 0x11, 0x70);
   	ism330dhcx_write_register(g_ism330dhcx_list, 0x12, 0x04);
   	ism330dhcx_write_register(g_ism330dhcx_list, 0x13, 0x00);
   	ism330dhcx_write_register(g_ism330dhcx_list, 0x14, 0x00);
