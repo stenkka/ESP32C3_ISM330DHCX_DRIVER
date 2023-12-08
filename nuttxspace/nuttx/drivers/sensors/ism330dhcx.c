@@ -386,7 +386,6 @@ static int ism330dhcx_open(FAR struct file *filep)
 	FAR struct inode *inode = filep->f_inode;
   	FAR struct ism330dhcx_dev_s *priv = inode->i_private;
   	uint8_t reg_content;
-  	uint8_t reg_addr;
 
 	ism330dhcx_read_register(priv, 0x19, &reg_content);
 	sninfo("REG = %04x\n", reg_content);
@@ -610,10 +609,10 @@ static int ism330dhcx_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
   	switch (cmd)
     {
-	case SNIOC_SET_LOWPERF:
+	case SNIOC_SET_LOWPERF:		
+		ism330dhcx_read_register(g_ism330dhcx_list, 0x15, &read_data);
 		switch (arg)
 		{
-		ism330dhcx_read_register(g_ism330dhcx_list, 0x15, &read_data);
 		case 1:
 			ism330dhcx_write_register(g_ism330dhcx_list, 0x15, 0x10 | read_data);
 			break;
@@ -779,18 +778,19 @@ int ism330dhcx_init()
 
   	ism330dhcx_write_register(g_ism330dhcx_list, 0x01, 0x00);
   	ism330dhcx_write_register(g_ism330dhcx_list, 0x02, 0x3F);
-  	ism330dhcx_write_register(g_ism330dhcx_list, 0x07, 0xFF);
+	// FIFO treshold: 6 slots (sensor data + TAG)
+  	ism330dhcx_write_register(g_ism330dhcx_list, 0x07, 0x3F);
   	ism330dhcx_write_register(g_ism330dhcx_list, 0x08, 0x00);
   	ism330dhcx_write_register(g_ism330dhcx_list, 0x09, 0x77);
-  	ism330dhcx_write_register(g_ism330dhcx_list, 0x0A, 0x56);
+  	// Enable continuous-FIFO mode (FIFO data is rewritten as new samples come in)
+	ism330dhcx_write_register(g_ism330dhcx_list, 0x0A, 0x56);
   	ism330dhcx_write_register(g_ism330dhcx_list, 0x0B, 0x00);
   	ism330dhcx_write_register(g_ism330dhcx_list, 0x0C, 0x00);
-  	ism330dhcx_write_register(g_ism330dhcx_list, 0x0D, 0x00);
-  	ism330dhcx_write_register(g_ism330dhcx_list, 0x0E, 0x00);
+	// Enable FIFO threshold interrupt on pin INT1
+	ism330dhcx_write_register(g_ism330dhcx_list, 0x0D, 0x08);
+	ism330dhcx_write_register(g_ism330dhcx_list, 0x0E, 0x00);
   	
-	// Accelerometer ODR (sampling rate)
-		
-	
+	// Accelerometer ODR (sampling rate)	
 
 	#ifdef CONFIG_ISM330DHCX_ACC_ODR__1_6
 	ism330dhcx_write_register(g_ism330dhcx_list, 0x10, 0xB0);
@@ -813,25 +813,21 @@ int ism330dhcx_init()
 	#endif
 
 	//Gyroscope ODR (sampling rate)
-	#ifdef CONFIG_ISM330DHCX_GYRO_ODR__1_6
-        ism330dhcx_write_register(g_ism330dhcx_list, 0x11, 0xB0);
-        sninfo("Gyroscope ODR: 1.6Hz\n");
-        #endif
 
-        #ifdef CONFIG_ISM330DHCX_GYRO_ODR__52
+   	#ifdef CONFIG_ISM330DHCX_GYRO_ODR__52
 	sninfo("Gyroscope ODR: 52Hz\n");
-        ism330dhcx_write_register(g_ism330dhcx_list, 0x11, 0x30);
+    ism330dhcx_write_register(g_ism330dhcx_list, 0x11, 0x30);
 	#endif
 
-        #ifdef CONFIG_ISM330DHCX_GYRO_ODR__833
-        sninfo("Gyroscope ODR: 833Hz\n");
-        ism330dhcx_write_register(g_ism330dhcx_list, 0x11, 0x70);
-        #endif
+	#ifdef CONFIG_ISM330DHCX_GYRO_ODR__833
+	sninfo("Gyroscope ODR: 833Hz\n");
+  	ism330dhcx_write_register(g_ism330dhcx_list, 0x11, 0x70);
+   	#endif
 
-        #ifdef CONFIG_ISM330DHCX_GYRO_ODR__6660
-        sninfo("Gyroscope ODR: 6.66kHz\n");
-        ism330dhcx_write_register(g_ism330dhcx_list, 0x11, 0xA0);
-        #endif
+  	#ifdef CONFIG_ISM330DHCX_GYRO_ODR__6660
+  	sninfo("Gyroscope ODR: 6.66kHz\n");
+   	ism330dhcx_write_register(g_ism330dhcx_list, 0x11, 0xA0);
+   	#endif
 
 
 
