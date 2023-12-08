@@ -316,14 +316,25 @@
 
 #define SNIOC_SET_ACC_ODR		   _SNIOC(0x0088)
 
-/* Command:      SNIOC_SET_LOWPERF
+/* Command:      SNIOC_SET_ACC_LOWPERF
 * Description:  Set performance mode for accelerometer.
 * Argument:     1 (low performance mode) or 0 (high performance mode).
 * Note:         If setting data rate failed, a negated errno va    lue is
 *               returned, otherwise, OK is returned.
 */
 
-#define SNIOC_SET_LOWPERF		   _SNIOC(0x0089)
+#define SNIOC_SET_ACC_LOWPERF		   _SNIOC(0x0089)
+
+#define SNIOC_SET_GYRO_ODR                  _SNIOC(0x0090)
+
+/* Command:      SNIOC_SET_GYRO_LOWPERF
+* Description:  Set performance mode for accelerometer.
+* Argument:     1 (low performance mode) or 0 (high performance mode).
+* Note:         If setting data rate failed, a negated errno va    lue is
+*               returned, otherwise, OK is returned.
+*/
+
+#define SNIOC_SET_GYRO_LOWPERF              _SNIOC(0x0091)
 
 
 #endif /* __INCLUDE_NUTTX_SENSORS_IOCTL_H */

@@ -35,9 +35,15 @@ int main(int argc, FAR char *argv[])
 	usleep(200000);
 	if (c == 15)
 	{	
+		// Set Acc to Lowperformance mode
+		ioctl(fd, SNIOC_SET_ACC_LOWPERF, 1);
 		// Set Acc ODR to 1.6Hz
-		ioctl(fd, SNIOC_SET_LOWPERF, 1);
 		ioctl(fd, SNIOC_SET_ACC_ODR, 1);
+		// Set Gyro to Lowperformance mode
+                ioctl(fd, SNIOC_SET_GYRO_LOWPERF, 1);
+		// Set Gyro ODR to 52.0Hz
+                ioctl(fd, SNIOC_SET_GYRO_ODR, 52);
+
 	}
 	}
 	return 0;

@@ -608,8 +608,8 @@ static int ism330dhcx_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 	uint8_t read_data = 0;
 
   	switch (cmd)
-    {
-	case SNIOC_SET_LOWPERF:		
+    	{
+	case SNIOC_SET_ACC_LOWPERF:
 		ism330dhcx_read_register(g_ism330dhcx_list, 0x15, &read_data);
 		switch (arg)
 		{
@@ -651,6 +651,48 @@ static int ism330dhcx_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 			break;
 		}
 		break;
+
+	case SNIOC_SET_GYRO_LOWPERF:
+                switch (arg)
+                {
+                ism330dhcx_read_register(g_ism330dhcx_list, 0x11, &read_data);
+                case 1:
+                        ism330dhcx_write_register(g_ism330dhcx_list, 0x16, 0x11 | read_data);
+                        break;
+                case 0:
+                        ism330dhcx_write_register(g_ism330dhcx_list, 0x16, ~0x11 & read_data);
+                        break;
+                default:
+                        snerr("ERROR: Unrecognized arg: %d\n", arg);
+                        ret = -ENOTTY;
+                        break;
+                }
+                break;
+
+
+		// Gyroscope ODR (sampling rate)
+        case SNIOC_SET_GYRO_ODR:
+                switch (arg)
+                {
+                case 52:  
+			sninfo("ioctl: Accelerometer ODR: 52Hz\n");
+                        ism330dhcx_write_register(g_ism330dhcx_list, 0x11, 0x30);
+                        break;
+                case 833:
+                        sninfo("ioctl: Accelerometer ODR: 833Hz\n");
+                        ism330dhcx_write_register(g_ism330dhcx_list, 0x11, 0x70);
+                        break;
+                case 6660:
+                        sninfo("ioctl: Accelerometer ODR: 6.66kHz\n");
+                        ism330dhcx_write_register(g_ism330dhcx_list, 0x11, 0xA0);
+                        break;
+                default:
+                        snerr("ERROR: Unrecognized arg: %d\n", arg);
+                        ret = -ENOTTY;
+                        break;
+                }
+                break;
+	
 	/* Command was not recognized */
     default:
     	snerr("ERROR: Unrecognized cmd: %d\n", cmd);
