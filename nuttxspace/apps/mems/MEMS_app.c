@@ -11,6 +11,9 @@ struct sensor_data
   int16_t x_acc;        /* Measurement result for x axis */
   int16_t y_acc;        /* Measurement result for y axis */
   int16_t z_acc;        /* Measurement result for z axis */
+  int16_t x_gyro;        /* Measurement result for x axis */
+  int16_t y_gyro;        /* Measurement result for y axis */
+  int16_t z_gyro;        /* Measurement result for z axis */
   int16_t temperature;  /* Measurement result for temperature sensor */
 };
 
@@ -30,7 +33,7 @@ int main(int argc, FAR char *argv[])
 		{
 			break;
 		}
-	printf("x_acc: %12d\n", sample.x_acc);
+	printf("x_acc: %12d, y_acc: %12d\n, x_gyro: %12d, y_gyro: %12d\n", sample.x_acc, sample.y_acc, sample.x_gyro, sample.y_gyro);
 	//printf("x_acc: %12d, %y_acc: %12d, z_acc: %12d, temp: %12d", sample.x_acc, sample.y_acc, sample.z_acc, sample.temperature);
 	usleep(200000);
 	if (c == 15)
@@ -40,9 +43,9 @@ int main(int argc, FAR char *argv[])
 		// Set Acc ODR to 1.6Hz
 		ioctl(fd, SNIOC_SET_ACC_ODR, 1);
 		// Set Gyro to Lowperformance mode
-                ioctl(fd, SNIOC_SET_GYRO_LOWPERF, 1);
+		ioctl(fd, SNIOC_SET_GYRO_LOWPERF, 1);
 		// Set Gyro ODR to 52.0Hz
-                ioctl(fd, SNIOC_SET_GYRO_ODR, 52);
+		ioctl(fd, SNIOC_SET_GYRO_ODR, 52);
 
 	}
 	}

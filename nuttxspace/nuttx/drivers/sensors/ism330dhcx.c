@@ -45,9 +45,12 @@
 
 struct ism330dhcx_sensor_data_s
 {
-  int16_t x_acc;        /* Measurement result for x axis */
-  int16_t y_acc;        /* Measurement result for y axis */
-  int16_t z_acc;        /* Measurement result for z axis */
+  int16_t x_acc;        /* Measurement result for x axis accelerometer */
+  int16_t y_acc;        /* Measurement result for y axis accelerometer */
+  int16_t z_acc;        /* Measurement result for z axis accelerometer */
+  int16_t x_gyro;        /* Measurement result for x axis gyro */
+  int16_t y_gyro;        /* Measurement result for y axis gyro */
+  int16_t z_gyro;        /* Measurement result for z axis gyro */
   int16_t temperature;  /* Measurement result for temperature sensor */
 };
 
@@ -87,6 +90,11 @@ static void ism330dhcx_read_acc_data(
   FAR struct ism330dhcx_dev_s *dev,
   uint16_t * x_acc, uint16_t * y_acc,
   uint16_t * z_acc);
+static void ism330dhcx_read_gyro_data(
+  FAR struct ism330dhcx_dev_s *dev,
+  uint16_t * x_gyro, uint16_t * y_gyro,
+  uint16_t * z_gyro);
+
 static void ism330dhcx_read_temperature(
   FAR struct ism330dhcx_dev_s *dev,
   uint16_t * temperature);
@@ -229,6 +237,13 @@ static void ism330dhcx_read_measurement_data(
   uint16_t z_acc = 0;
   ism330dhcx_read_acc_data(dev, &x_acc, &y_acc, &z_acc);
 
+  /* Gyro data */
+  uint16_t x_gyro = 0;
+  uint16_t y_gyro = 0;
+  uint16_t z_gyro = 0;
+  ism330dhcx_read_gyro_data(dev, &x_gyro, &y_gyro, &z_gyro);
+
+
   /* Temperature */
   uint16_t temperature = 0;
   ism330dhcx_read_temperature(dev, &temperature);
@@ -244,6 +259,10 @@ static void ism330dhcx_read_measurement_data(
   dev->data.x_acc = (int16_t) (x_acc);
   dev->data.y_acc = (int16_t) (y_acc);
   dev->data.z_acc = (int16_t) (z_acc);
+  dev->data.x_gyro = (int16_t) (x_gyro);
+  dev->data.y_gyro = (int16_t) (y_gyro);
+  dev->data.z_gyro = (int16_t) (z_gyro);
+
   dev->data.temperature = (int16_t) (temperature);
 
   /* Give back the semaphore */
@@ -252,6 +271,49 @@ static void ism330dhcx_read_measurement_data(
   /* Feed sensor data to entropy pool */
   //add_sensor_randomness(
   //  (x_acc << 16) ^ (y_acc << 10) ^ (z_acc << 2) ^ temperature);
+}
+
+/****************************************************************************
+ * Name: ism330dhcx_read_gyro_data
+ ****************************************************************************/
+
+static void ism330dhcx_read_gyro_data(
+  FAR struct ism330dhcx_dev_s *dev,
+  uint16_t * x_gyro, 
+  uint16_t * y_gyro,
+  uint16_t * z_gyro)
+{
+  /* Lock the SPI bus so that only one device 
+   * can access it at the same time
+   */
+  SPI_LOCK(dev->spi, true);
+
+  /* Set CS to low which selects the ISM330DHCX */
+  SPI_SELECT(dev->spi, dev->config->spi_devid, true);
+
+  /* Transmit the register address from where we want to start reading
+   * 0x80 -> MSB is set 
+   *   -> Read Indication 
+   */
+  // OUTX_L_G 0x22
+  // OUTY_L_G 0x24
+  // OUTZ_L_G 0x26
+
+  SPI_SEND(dev->spi, (0x22 | 0x80)); /* RX */
+  *x_gyro  = ((uint16_t) (SPI_SEND(dev->spi, 0)) << 0);  /* LSB */
+  *x_gyro |= ((uint16_t) (SPI_SEND(dev->spi, 0)) << 8);  /* MSB */
+
+  *y_gyro  = ((uint16_t) (SPI_SEND(dev->spi, 0)) << 0);  /* LSB */
+  *y_gyro |= ((uint16_t) (SPI_SEND(dev->spi, 0)) << 8);  /* MSB */
+
+  *z_gyro  = ((uint16_t) (SPI_SEND(dev->spi, 0)) << 0);  /* LSB */
+  *z_gyro |= ((uint16_t) (SPI_SEND(dev->spi, 0)) << 8);  /* MSB */
+
+  /* Set CS to high which deselects the ISM330DHCX */
+  SPI_SELECT(dev->spi, dev->config->spi_devid, false);
+
+  /* Unlock the SPI bus */
+  SPI_LOCK(dev->spi, false);
 }
 
 /****************************************************************************
@@ -652,15 +714,15 @@ static int ism330dhcx_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 		}
 		break;
 
-	case SNIOC_SET_GYRO_LOWPERF:
-                switch (arg)
+	case SNIOC_SET_GYRO_LOWPERF:     
+                ism330dhcx_read_register(g_ism330dhcx_list, 0x16, &read_data);
+				switch (arg)
                 {
-                ism330dhcx_read_register(g_ism330dhcx_list, 0x11, &read_data);
                 case 1:
-                        ism330dhcx_write_register(g_ism330dhcx_list, 0x16, 0x11 | read_data);
+                        ism330dhcx_write_register(g_ism330dhcx_list, 0x16, 0x80 | read_data);
                         break;
                 case 0:
-                        ism330dhcx_write_register(g_ism330dhcx_list, 0x16, ~0x11 & read_data);
+                        ism330dhcx_write_register(g_ism330dhcx_list, 0x16, ~0x80 & read_data);
                         break;
                 default:
                         snerr("ERROR: Unrecognized arg: %d\n", arg);
