@@ -33,21 +33,20 @@ int main(int argc, FAR char *argv[])
 		{
 			break;
 		}
-	printf("x_acc: %12d, y_acc: %12d\n, x_gyro: %12d, y_gyro: %12d\n", sample.x_acc, sample.y_acc, sample.x_gyro, sample.y_gyro);
-	//printf("x_acc: %12d, %y_acc: %12d, z_acc: %12d, temp: %12d", sample.x_acc, sample.y_acc, sample.z_acc, sample.temperature);
-	usleep(200000);
-	if (c == 15)
-	{	
-		// Set Acc to Lowperformance mode
-		ioctl(fd, SNIOC_SET_ACC_LOWPERF, 1);
-		// Set Acc ODR to 1.6Hz
-		ioctl(fd, SNIOC_SET_ACC_ODR, 1);
-		// Set Gyro to Lowperformance mode
-		ioctl(fd, SNIOC_SET_GYRO_LOWPERF, 1);
-		// Set Gyro ODR to 52.0Hz
-		ioctl(fd, SNIOC_SET_GYRO_ODR, 52);
+		printf("x_acc: %12d, y_acc: %12d, x_gyro: %12d, y_gyro: %12d, temp: %12d\n", sample.x_acc, sample.y_acc, sample.x_gyro, sample.y_gyro, sample.temperature);
+		usleep(200000);
+		if (c == 15)
+		{	
+			// Set Acc to Lowperformance mode
+			ioctl(fd, SNIOC_SET_ACC_LOWPERF, 1);
+			// Set Acc ODR to 1.6Hz
+			ioctl(fd, SNIOC_SET_ACC_ODR, 1);
+			// Set Gyro to Lowperformance mode
+			ioctl(fd, SNIOC_SET_GYRO_LOWPERF, 1);
+			// Set Gyro ODR to 52.0Hz
+			ioctl(fd, SNIOC_SET_GYRO_ODR, 52);
 
-	}
+		}	
 	}
 	return 0;
 }

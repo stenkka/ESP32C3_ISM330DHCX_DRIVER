@@ -70,6 +70,13 @@ struct ism330dhcx_dev_s
                                         * data was signalled in an interrupt */
 };
 
+struct ism330dhcx_sensor_data_ring_buffer
+{
+	int16_t* data;
+	uint8_t index;
+	uint8_t num;
+};
+
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
@@ -300,7 +307,7 @@ static void ism330dhcx_read_gyro_data(
   // OUTZ_L_G 0x26
 
   SPI_SEND(dev->spi, (0x22 | 0x80)); /* RX */
-  *x_gyro  = ((uint16_t) (SPI_SEND(dev->spi, 0)) << 0);  /* LSB */
+  *x_gyro  = ((uint16_t) (SPI_SEND(dev->spi, 0)) << 0); /* LSB */
   *x_gyro |= ((uint16_t) (SPI_SEND(dev->spi, 0)) << 8);  /* MSB */
 
   *y_gyro  = ((uint16_t) (SPI_SEND(dev->spi, 0)) << 0);  /* LSB */
@@ -312,7 +319,7 @@ static void ism330dhcx_read_gyro_data(
   /* Set CS to high which deselects the ISM330DHCX */
   SPI_SELECT(dev->spi, dev->config->spi_devid, false);
 
-  /* Unlock the SPI bus */
+  /* Unlock the SPI bus*/
   SPI_LOCK(dev->spi, false);
 }
 
@@ -639,6 +646,9 @@ static ssize_t ism330dhcx_read(
   data->x_acc = priv->data.x_acc;
   data->y_acc = priv->data.y_acc;
   data->z_acc = priv->data.z_acc;
+  data->x_gyro = priv->data.x_gyro;
+  data->y_gyro = priv->data.y_gyro;
+  data->z_gyro = priv->data.z_gyro;
   data->temperature = priv->data.temperature;
 
   /* Give back the semaphore */
