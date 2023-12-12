@@ -30,12 +30,12 @@
 #include <string.h>
 
 #include <nuttx/kmalloc.h>
-#include <nuttx/wqueue.h>
 #include <nuttx/random.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/sensors/ism330dhcx.h>
 #include <nuttx/sensors/ioctl.h>
+#include <nuttx/wqueue.h>
 
 #if defined(CONFIG_SPI) && defined(CONFIG_SENSORS_ISM330DHCX)
 
@@ -68,6 +68,7 @@ struct ism330dhcx_dev_s
                                         * retrieving the data from the
                                         * sensor after the arrival of new
                                         * data was signalled in an interrupt */
+  uint8_t isConfigured;
 };
 
 struct ism330dhcx_sensor_data_ring_buffer
@@ -458,9 +459,6 @@ static int ism330dhcx_open(FAR struct file *filep)
   	FAR struct ism330dhcx_dev_s *priv = inode->i_private;
   	uint8_t reg_content;
 
-	ism330dhcx_read_register(priv, 0x19, &reg_content);
-	sninfo("REG = %04x\n", reg_content);
-
   /* ConfigA
   Ac 01 00  FUNC_CFG_ACCESS (FUNC_CFG_ACCESS=0, SHUB_REG_ACCESS=0)
   Ac 02 3F  PIN_CTRL (OIS_PU_DIS=0 OCS_Aux and SDO_Aux pins with pull-up;)
@@ -580,9 +578,16 @@ static int ism330dhcx_open(FAR struct file *filep)
 		return -ENODEV;
 	}
 
+	if (!priv->isConfigured)
+	{
+		ism330dhcx_configure_default(priv);
+	}
+
   	reg_content = 0;
   	ism330dhcx_read_register(priv, 0x0F, &reg_content);
-  	spiinfo("STATUS_REG = %04x (expected 6B)\n", reg_content);
+
+  	//spiinfo("STATUS_REG = %04x (expected 6B)\n", reg_content);
+	if(reg_content != 0x6b) {return -ENODEV;}	// check WHO_AM_I register
 
 	return OK;
 }
@@ -944,6 +949,8 @@ int ism330dhcx_register(
   priv->config = config;
   priv->work.worker = NULL;
 
+  priv->isConfigured = 0;
+
   nxsem_init(&priv->datasem, 0, 1);  /* Initialize sensor data access
                                       * semaphore */
 
@@ -989,6 +996,100 @@ int ism330dhcx_register(
   * Returned Value:
   *   Zero (OK) on success; a negated errno value on failure.
 *************************************************************    ****************/
+
+int ism330dhcx_configure_default(struct ism330dhcx_dev_s* priv)
+{
+	if (!priv)
+	{
+		snerr("ism330dhcx_dev_s is null!\n");
+		return -ENODEV;
+	}
+
+	/* Perform a reset */
+ 	ism330dhcx_reset(priv);
+
+  	ism330dhcx_write_register(priv, 0x01, 0x00);
+  	ism330dhcx_write_register(priv, 0x02, 0x3F);
+	// FIFO treshold: 6 slots (sensor data + TAG)
+  	ism330dhcx_write_register(priv, 0x07, 0x3F);
+  	ism330dhcx_write_register(priv, 0x08, 0x00);
+  	ism330dhcx_write_register(priv, 0x09, 0x77);
+  	// Enable continuous-FIFO mode (FIFO data is rewritten as new samples come in)
+	ism330dhcx_write_register(priv, 0x0A, 0x56);
+  	ism330dhcx_write_register(priv, 0x0B, 0x00);
+  	ism330dhcx_write_register(priv, 0x0C, 0x00);
+	// Enable FIFO threshold interrupt on pin INT1
+	ism330dhcx_write_register(priv, 0x0D, 0x08);
+	ism330dhcx_write_register(priv, 0x0E, 0x00);
+
+	// Accelerometer ODR (sampling rate)
+
+	#ifdef CONFIG_ISM330DHCX_ACC_ODR__1_6
+	ism330dhcx_write_register(priv, 0x10, 0xB0);
+	sninfo("Accelerometer ODR: 1.6Hz\n");
+	#endif
+
+	#ifdef CONFIG_ISM330DHCX_ACC_ODR__52
+	sninfo("Accelerometer ODR: 52Hz\n");
+	ism330dhcx_write_register(priv, 0x10, 0x30);
+	#endif
+
+	#ifdef CONFIG_ISM330DHCX_ACC_ODR__833
+	sninfo("Accelerometer ODR: 833Hz\n");
+	ism330dhcx_write_register(priv, 0x10, 0x70);
+	#endif
+
+	#ifdef CONFIG_ISM330DHCX_ACC_ODR__6660
+	sninfo("Accelerometer ODR: 6.66kHz\n");
+	ism330dhcx_write_register(priv, 0x10, 0xA0);
+	#endif
+
+	//Gyroscope ODR (sampling rate)
+
+   	#ifdef CONFIG_ISM330DHCX_GYRO_ODR__52
+	sninfo("Gyroscope ODR: 52Hz\n");
+    ism330dhcx_write_register(priv, 0x11, 0x30);
+	#endif
+
+	#ifdef CONFIG_ISM330DHCX_GYRO_ODR__833
+	sninfo("Gyroscope ODR: 833Hz\n");
+  	ism330dhcx_write_register(priv, 0x11, 0x70);
+   	#endif
+
+  	#ifdef CONFIG_ISM330DHCX_GYRO_ODR__6660
+  	sninfo("Gyroscope ODR: 6.66kHz\n");
+   	ism330dhcx_write_register(priv, 0x11, 0xA0);
+   	#endif
+
+
+
+  	ism330dhcx_write_register(priv, 0x12, 0x04);
+  	ism330dhcx_write_register(priv, 0x13, 0x00);
+  	ism330dhcx_write_register(priv, 0x14, 0x00);
+  	ism330dhcx_write_register(priv, 0x15, 0x00);
+  	ism330dhcx_write_register(priv, 0x16, 0x00);
+  	ism330dhcx_write_register(priv, 0x17, 0x00);
+  	ism330dhcx_write_register(priv, 0x18, 0xE2);
+  	ism330dhcx_write_register(priv, 0x19, 0x20);
+  	ism330dhcx_write_register(priv, 0x56, 0x00);
+  	ism330dhcx_write_register(priv, 0x57, 0x00);
+  	ism330dhcx_write_register(priv, 0x58, 0x00);
+  	ism330dhcx_write_register(priv, 0x59, 0x00);
+  	ism330dhcx_write_register(priv, 0x5A, 0x00);
+  	ism330dhcx_write_register(priv, 0x5B, 0x00);
+  	ism330dhcx_write_register(priv, 0x5C, 0x00);
+  	ism330dhcx_write_register(priv, 0x5D, 0x00);
+  	ism330dhcx_write_register(priv, 0x5E, 0x00);
+  	ism330dhcx_write_register(priv, 0x5F, 0x00);
+  	ism330dhcx_write_register(priv, 0x73, 0x00);
+  	ism330dhcx_write_register(priv, 0x74, 0x00);
+  	ism330dhcx_write_register(priv, 0x75, 0x00);
+
+	priv->isConfigured = 1;
+
+	return 0;
+}
+
 int ism330dhcx_init()
 {
 	//struct ism330dhcx_dev_s* priv = g_ism330dhcx_list;
@@ -999,7 +1100,8 @@ int ism330dhcx_init()
 	DEBUGASSERT(g_ism330dhcx_list != NULL);
 	if (!g_ism330dhcx_list)
 	{
-		return -1;
+		snerr("No ism330dhcx_dev_s structs found in g_ism330dhcx_list!\n");
+		return 0;	// Spec: "Ignore but log errors"
 	}
 	
 	/* Perform a reset */
@@ -1022,7 +1124,7 @@ int ism330dhcx_init()
 	ism330dhcx_write_register(g_ism330dhcx_list, 0x0E, 0x00);
   	
 	// Accelerometer ODR (sampling rate)	
-
+	
 	#ifdef CONFIG_ISM330DHCX_ACC_ODR__1_6
 	ism330dhcx_write_register(g_ism330dhcx_list, 0x10, 0xB0);
 	sninfo("Accelerometer ODR: 1.6Hz\n");
@@ -1085,6 +1187,8 @@ int ism330dhcx_init()
   	ism330dhcx_write_register(g_ism330dhcx_list, 0x75, 0x00);
 
 	sninfo("ism330dhcx initialized\n");
+
+	g_ism330dhcx_list->isConfigured = 1;
 
 	return 0;
 }
