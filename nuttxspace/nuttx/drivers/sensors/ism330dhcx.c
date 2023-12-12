@@ -764,6 +764,58 @@ static int ism330dhcx_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
                         break;
                 }
                 break;
+		
+		//Fifo watermark treshold
+	case SNIOC_SET_FIFO_WM:
+		switch (arg)
+		{
+                case 5:
+                        sninfo("ioctl: FIFO treshold: 5\n");
+                        ism330dhcx_write_register(g_ism330dhcx_list, 0x07, 0x1F);
+                        break;
+                case 6:
+                        sninfo("ioctl: FIFO treshold: 6\n");
+                        ism330dhcx_write_register(g_ism330dhcx_list, 0x07, 0x3F);
+                        break;
+                case 7:
+                        sninfo("ioctl: FIFO treshold: 7\n");
+                        ism330dhcx_write_register(g_ism330dhcx_list, 0x07, 0x4F);
+                        break;
+                default:
+                        snerr("ERROR: Unrecognized arg: %d\n", arg);
+                        ret = -ENOTTY;
+                        break;
+                }
+                break;
+		
+		//Fifo batch rate (gyro & accelerometer)
+		
+	case SNIOC_SET_FIFO_BATCH_RATE:
+                switch (arg)
+                {
+		case 0:
+                        sninfo("ioctl: FIFO is not used\n");
+                        ism330dhcx_write_register(g_ism330dhcx_list, 0x09, 0x00);
+                        break;
+                case 12:
+                        sninfo("ioctl: FIFO BATCH_RATE: 12.5Hz\n");
+                        ism330dhcx_write_register(g_ism330dhcx_list, 0x09, 0x11);
+                        break;
+                case 52:
+                        sninfo("ioctl: FIFO BATCH_RATE: 52Hz\n");
+                        ism330dhcx_write_register(g_ism330dhcx_list, 0x09, 0x33);
+                        break;
+                case 833:
+                        sninfo("ioctl: FIFO BATCH_RATE: 833Hz\n");
+                        ism330dhcx_write_register(g_ism330dhcx_list, 0x09, 0x77);
+                        break;
+                default:
+                        snerr("ERROR: Unrecognized arg: %d\n", arg);
+                        ret = -ENOTTY;
+                        break;
+                }
+                break;
+
 	
 	/* Command was not recognized */
     default:

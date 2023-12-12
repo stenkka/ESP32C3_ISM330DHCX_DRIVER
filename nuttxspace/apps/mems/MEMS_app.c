@@ -45,6 +45,10 @@ int main(int argc, FAR char *argv[])
 			ioctl(fd, SNIOC_SET_GYRO_LOWPERF, 1);
 			// Set Gyro ODR to 52.0Hz
 			ioctl(fd, SNIOC_SET_GYRO_ODR, 52);
+			// Set Fifo watermark treshold to 6 slots (sensor data + TAG)
+			ioctl(fd, SNIOC_SET_FIFO_WM, 6);
+			// Set Fifo batch rate 52Hz
+			ioctl(fd, SNIOC_SET_GYRO_ODR, 52);
 
 		}	
 	}

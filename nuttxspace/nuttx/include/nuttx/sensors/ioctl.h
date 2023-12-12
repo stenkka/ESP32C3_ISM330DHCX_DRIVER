@@ -325,16 +325,41 @@
 
 #define SNIOC_SET_ACC_LOWPERF		   _SNIOC(0x0089)
 
+/* Command:      SNIOC_SET_GYRO_ODR
+* Description:  Set ODR (data rate) for gyroscope.
+* Argument:     Data rate.
+* Note:         If setting data rate failed, a negated errno va    lue is
+*               returned, otherwise, OK is returned.
+*/
+
+
 #define SNIOC_SET_GYRO_ODR                  _SNIOC(0x0090)
 
 /* Command:      SNIOC_SET_GYRO_LOWPERF
-* Description:  Set performance mode for accelerometer.
+* Description:  Set performance mode for gyroscope.
 * Argument:     1 (low performance mode) or 0 (high performance mode).
 * Note:         If setting data rate failed, a negated errno va    lue is
 *               returned, otherwise, OK is returned.
 */
 
 #define SNIOC_SET_GYRO_LOWPERF              _SNIOC(0x0091)
+
+#define SNIOC_SET_FIFO_WM                  _SNIOC(0x0092)
+
+/* Command:      SNIOC_SET_FIFO_WM
+* Description:  Set watermark treshold for fifo.
+* Argument:     watermark.
+* Note:         If setting data rate failed, a negated errno va    lue is
+*               returned, otherwise, OK is returned.
+*/
+
+#define SNIOC_SET_FIFO_BATCH_RATE                  _SNIOC(0x0093)
+
+/* Command:      SNIOC_SET_FIFO_BATCH_RATE
+* Description:  Set batch rate fifo for accelerometer & gyroscope.
+* Argument:     Batch rate.
+* Note:         If setting data rate failed, a negated errno va    lue is
+*               returned, otherwise, OK is returned.
 
 
 #endif /* __INCLUDE_NUTTX_SENSORS_IOCTL_H */
