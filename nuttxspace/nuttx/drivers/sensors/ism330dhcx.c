@@ -702,7 +702,7 @@ static int ism330dhcx_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 	// Accelerometer ODR (sampling rate)
 	case SNIOC_SET_ACC_ODR:	
 		ism330dhcx_read_register(g_ism330dhcx_list, 0x10, &read_data);
-		read_data |= 0x0F;	// zero-out 4 MSB's
+		read_data &= 0x0F;	// zero-out 4 MSB's
 		switch (arg)
 		{
 		case 1:
@@ -749,7 +749,7 @@ static int ism330dhcx_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 		// Gyroscope ODR (sampling rate)
 	case SNIOC_SET_GYRO_ODR:
 		ism330dhcx_read_register(g_ism330dhcx_list, 0x11, &read_data);
-        read_data |= 0x0F;  // zero-out 4 MSB's
+        read_data &= 0x0F;  // zero-out 4 MSB's
 		switch (arg)
         {
         case 52:  
@@ -794,10 +794,11 @@ static int ism330dhcx_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         }
         break;
 		
-		//Fifo batch rate (gyro & accelerometer)
+		//Fifo batch rate for gyroscope
 		
-	case SNIOC_SET_FIFO_BATCH_RATE:
+	case SNIOC_SET_FIFO_BATCH_RATE_GYRO:
 		ism330dhcx_read_register(g_ism330dhcx_list, 0x09, &read_data);
+		read_data &= 0x0F;
         switch (arg)
         {
 		case 0:
@@ -806,15 +807,15 @@ static int ism330dhcx_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
             break;
         case 12:
      	    sninfo("ioctl: FIFO BATCH_RATE: 12.5Hz\n");
-            ism330dhcx_write_register(g_ism330dhcx_list, 0x09, 0x11 | read_data);
+            ism330dhcx_write_register(g_ism330dhcx_list, 0x09, 0x10 | read_data);
             break;
         case 52:
             sninfo("ioctl: FIFO BATCH_RATE: 52Hz\n");
-            ism330dhcx_write_register(g_ism330dhcx_list, 0x09, 0x33 | read_data);
+            ism330dhcx_write_register(g_ism330dhcx_list, 0x09, 0x30 | read_data);
             break;
      	case 833:
        	    sninfo("ioctl: FIFO BATCH_RATE: 833Hz\n");
-      	    ism330dhcx_write_register(g_ism330dhcx_list, 0x09, 0x77 | read_data);
+      	    ism330dhcx_write_register(g_ism330dhcx_list, 0x09, 0x70 | read_data);
      	    break;
   	    default:
             snerr("ERROR: Unrecognized arg: %d\n", arg);
@@ -822,6 +823,64 @@ static int ism330dhcx_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
             break;
         }
         break;
+
+	         //Fifo batch rate for accelerometer
+
+        case SNIOC_SET_FIFO_BATCH_RATE_ACC:
+        	ism330dhcx_read_register(g_ism330dhcx_list, 0x09, &read_data);
+                read_data &= 0x0F;
+        switch (arg)
+        {
+                case 0:
+                sninfo("ioctl: FIFO is not used\n");
+            ism330dhcx_write_register(g_ism330dhcx_list, 0x09, 0x0F | read_data);
+            break;
+        case 12:
+            sninfo("ioctl: FIFO BATCH_RATE: 12.5Hz\n");
+            ism330dhcx_write_register(g_ism330dhcx_list, 0x09, 0x1F | read_data);
+            break;
+        case 52:
+            sninfo("ioctl: FIFO BATCH_RATE: 52Hz\n");
+            ism330dhcx_write_register(g_ism330dhcx_list, 0x09, 0x3F | read_data);
+            break;
+        case 833:
+            sninfo("ioctl: FIFO BATCH_RATE: 833Hz\n");
+            ism330dhcx_write_register(g_ism330dhcx_list, 0x09, 0x7F | read_data);
+            break;
+            default:
+            snerr("ERROR: Unrecognized arg: %d\n", arg);
+            ret = -ENOTTY;
+            break;
+        }
+        break;
+	
+	          //Fifo batch rate for temperature	
+
+        case SNIOC_SET_FIFO_BATCH_RATE_TEMP:
+            ism330dhcx_read_register(g_ism330dhcx_list, 0x0A, &read_data);
+            read_data |= 0xCF;
+        switch (arg)
+        {
+                case 0:
+                sninfo("ioctl: FIFO is not used\n");
+            ism330dhcx_write_register(g_ism330dhcx_list, 0x0A, 0x00 | read_data);
+            break;
+        case 12:
+            sninfo("ioctl: FIFO BATCH_RATE: 12.5Hz\n");
+            ism330dhcx_write_register(g_ism330dhcx_list, 0x09, 0x20 | read_data);
+            break;
+        case 52:
+            sninfo("ioctl: FIFO BATCH_RATE: 52Hz\n");
+            ism330dhcx_write_register(g_ism330dhcx_list, 0x09, 0x30 | read_data);
+            break;
+            default:
+            snerr("ERROR: Unrecognized arg: %d\n", arg);
+            ret = -ENOTTY;
+            break;
+        }
+        break;
+
+
 	
 	/* Command was not recognized */
     default:

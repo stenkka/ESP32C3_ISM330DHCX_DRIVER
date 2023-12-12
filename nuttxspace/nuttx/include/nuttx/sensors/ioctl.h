@@ -353,13 +353,32 @@
 *               returned, otherwise, OK is returned.
 */
 
-#define SNIOC_SET_FIFO_BATCH_RATE                  _SNIOC(0x0093)
+#define SNIOC_SET_FIFO_BATCH_RATE_GYRO                  _SNIOC(0x0093)
 
-/* Command:      SNIOC_SET_FIFO_BATCH_RATE
-* Description:  Set batch rate fifo for accelerometer & gyroscope.
+/* Command:      SNIOC_SET_FIFO_BATCH_RATE_GYRO
+* Description:  Set batch rate fifo for gyroscope.
 * Argument:     Batch rate.
 * Note:         If setting data rate failed, a negated errno va    lue is
 *               returned, otherwise, OK is returned.
 */
+
+#define SNIOC_SET_FIFO_BATCH_RATE_ACC                  _SNIOC(0x0094)
+
+/* Command:      SNIOC_SET_FIFO_BATCH_RATE_ACC
+* Description:  Set batch rate fifo for accelerometer.
+* Argument:     Batch rate.
+* Note:         If setting data rate failed, a negated errno va    lue is
+*               returned, otherwise, OK is returned.
+*/
+
+#define SNIOC_SET_FIFO_BATCH_RATE_TEMP                  _SNIOC(0x0095)
+
+/* Command:      SNIOC_SET_FIFO_BATCH_RATE_TEMP
+* Description:  Set batch rate fifo for temperature.
+* Argument:     Batch rate.
+* Note:         If setting data rate failed, a negated errno va    lue is
+*               returned, otherwise, OK is returned.
+*/
+
 
 #endif /* __INCLUDE_NUTTX_SENSORS_IOCTL_H */
