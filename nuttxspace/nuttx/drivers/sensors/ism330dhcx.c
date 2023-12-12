@@ -232,7 +232,7 @@ static void ism330dhcx_reset(FAR struct ism330dhcx_dev_s *dev)
 }
 
 /****************************************************************************
- * Name: ism330dhcx_interrupt_handler
+ * Name: ism330dhcx_read_measurement_data
  ****************************************************************************/
 
 static void ism330dhcx_read_measurement_data(
@@ -407,6 +407,8 @@ static int ism330dhcx_interrupt_handler(int irq, FAR void *context)
   /* This function should be called upon a rising edge on the ISM330DHCX DRDY
    * pin since it signals that new data has been measured.
    */
+
+	sninfo("INTERRUPT: IRQ = %d\n", irq);
   FAR struct ism330dhcx_dev_s *priv = 0;
   int ret;
 
@@ -680,7 +682,7 @@ static int ism330dhcx_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 	uint8_t read_data = 0;
 
   	switch (cmd)
-    	{
+    {
 	case SNIOC_SET_ACC_LOWPERF:
 		ism330dhcx_read_register(g_ism330dhcx_list, 0x15, &read_data);
 		switch (arg)
@@ -698,24 +700,26 @@ static int ism330dhcx_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 		}
 		break;
 	// Accelerometer ODR (sampling rate)
-	case SNIOC_SET_ACC_ODR:
+	case SNIOC_SET_ACC_ODR:	
+		ism330dhcx_read_register(g_ism330dhcx_list, 0x10, &read_data);
+		read_data |= 0x0F;	// zero-out 4 MSB's
 		switch (arg)
 		{
 		case 1:
-			ism330dhcx_write_register(g_ism330dhcx_list, 0x10, 0xB0);
+			ism330dhcx_write_register(g_ism330dhcx_list, 0x10, 0xB0 | read_data);
 			sninfo("ioctl: Accelerometer ODR: 1.6Hz\n");
 			break;
 		case 52:
 			sninfo("ioctl: Accelerometer ODR: 52Hz\n");
-			ism330dhcx_write_register(g_ism330dhcx_list, 0x10, 0x30);
+			ism330dhcx_write_register(g_ism330dhcx_list, 0x10, 0x30 | read_data);
 			break;
 		case 833:
 			sninfo("ioctl: Accelerometer ODR: 833Hz\n");
-			ism330dhcx_write_register(g_ism330dhcx_list, 0x10, 0x70);
+			ism330dhcx_write_register(g_ism330dhcx_list, 0x10, 0x70 | read_data);
 			break;
 		case 6660:
 			sninfo("ioctl: Accelerometer ODR: 6.66kHz\n");
-			ism330dhcx_write_register(g_ism330dhcx_list, 0x10, 0xA0);
+			ism330dhcx_write_register(g_ism330dhcx_list, 0x10, 0xA0 | read_data);
 			break;
 		default:
 			snerr("ERROR: Unrecognized arg: %d\n", arg);
@@ -725,97 +729,99 @@ static int ism330dhcx_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 		break;
 
 	case SNIOC_SET_GYRO_LOWPERF:     
-                ism330dhcx_read_register(g_ism330dhcx_list, 0x16, &read_data);
-				switch (arg)
-                {
-                case 1:
-                        ism330dhcx_write_register(g_ism330dhcx_list, 0x16, 0x80 | read_data);
-                        break;
-                case 0:
-                        ism330dhcx_write_register(g_ism330dhcx_list, 0x16, ~0x80 & read_data);
-                        break;
-                default:
-                        snerr("ERROR: Unrecognized arg: %d\n", arg);
-                        ret = -ENOTTY;
-                        break;
-                }
-                break;
+    	ism330dhcx_read_register(g_ism330dhcx_list, 0x16, &read_data);
+		switch (arg)
+        {
+        case 1:
+        	ism330dhcx_write_register(g_ism330dhcx_list, 0x16, 0x80 | read_data);
+            break;
+        case 0:
+            ism330dhcx_write_register(g_ism330dhcx_list, 0x16, ~0x80 & read_data);
+            break;
+        default:
+        	snerr("ERROR: Unrecognized arg: %d\n", arg);
+            ret = -ENOTTY;
+            break;
+        }
+        break;
 
 
 		// Gyroscope ODR (sampling rate)
-        case SNIOC_SET_GYRO_ODR:
-                switch (arg)
-                {
-                case 52:  
+	case SNIOC_SET_GYRO_ODR:
+		ism330dhcx_read_register(g_ism330dhcx_list, 0x11, &read_data);
+        read_data |= 0x0F;  // zero-out 4 MSB's
+		switch (arg)
+        {
+        case 52:  
 			sninfo("ioctl: Accelerometer ODR: 52Hz\n");
-                        ism330dhcx_write_register(g_ism330dhcx_list, 0x11, 0x30);
-                        break;
-                case 833:
-                        sninfo("ioctl: Accelerometer ODR: 833Hz\n");
-                        ism330dhcx_write_register(g_ism330dhcx_list, 0x11, 0x70);
-                        break;
-                case 6660:
-                        sninfo("ioctl: Accelerometer ODR: 6.66kHz\n");
-                        ism330dhcx_write_register(g_ism330dhcx_list, 0x11, 0xA0);
-                        break;
-                default:
-                        snerr("ERROR: Unrecognized arg: %d\n", arg);
-                        ret = -ENOTTY;
-                        break;
-                }
-                break;
+            ism330dhcx_write_register(g_ism330dhcx_list, 0x11, 0x30 | read_data);
+            break;
+        case 833:
+        	sninfo("ioctl: Accelerometer ODR: 833Hz\n");
+            ism330dhcx_write_register(g_ism330dhcx_list, 0x11, 0x70 | read_data);
+            break;
+        case 6660:
+        	sninfo("ioctl: Accelerometer ODR: 6.66kHz\n");
+            ism330dhcx_write_register(g_ism330dhcx_list, 0x11, 0xA0 | read_data);
+            break;
+        default:
+            snerr("ERROR: Unrecognized arg: %d\n", arg);
+            ret = -ENOTTY;
+            break;
+        }
+        break;
 		
 		//Fifo watermark treshold
 	case SNIOC_SET_FIFO_WM:
 		switch (arg)
 		{
-                case 5:
-                        sninfo("ioctl: FIFO treshold: 5\n");
-                        ism330dhcx_write_register(g_ism330dhcx_list, 0x07, 0x1F);
-                        break;
-                case 6:
-                        sninfo("ioctl: FIFO treshold: 6\n");
-                        ism330dhcx_write_register(g_ism330dhcx_list, 0x07, 0x3F);
-                        break;
-                case 7:
-                        sninfo("ioctl: FIFO treshold: 7\n");
-                        ism330dhcx_write_register(g_ism330dhcx_list, 0x07, 0x4F);
-                        break;
-                default:
-                        snerr("ERROR: Unrecognized arg: %d\n", arg);
-                        ret = -ENOTTY;
-                        break;
-                }
-                break;
+        case 5:
+        	sninfo("ioctl: FIFO treshold: 5\n");
+            ism330dhcx_write_register(g_ism330dhcx_list, 0x07, 0x1F);
+            break;
+      	case 6:
+            sninfo("ioctl: FIFO treshold: 6\n");
+            ism330dhcx_write_register(g_ism330dhcx_list, 0x07, 0x3F);
+            break;
+        case 7:
+        	sninfo("ioctl: FIFO treshold: 7\n");
+            ism330dhcx_write_register(g_ism330dhcx_list, 0x07, 0x4F);
+            break;
+        default:
+            snerr("ERROR: Unrecognized arg: %d\n", arg);
+            ret = -ENOTTY;
+            break;
+        }
+        break;
 		
 		//Fifo batch rate (gyro & accelerometer)
 		
 	case SNIOC_SET_FIFO_BATCH_RATE:
-                switch (arg)
-                {
+		ism330dhcx_read_register(g_ism330dhcx_list, 0x09, &read_data);
+        switch (arg)
+        {
 		case 0:
-                        sninfo("ioctl: FIFO is not used\n");
-                        ism330dhcx_write_register(g_ism330dhcx_list, 0x09, 0x00);
-                        break;
-                case 12:
-                        sninfo("ioctl: FIFO BATCH_RATE: 12.5Hz\n");
-                        ism330dhcx_write_register(g_ism330dhcx_list, 0x09, 0x11);
-                        break;
-                case 52:
-                        sninfo("ioctl: FIFO BATCH_RATE: 52Hz\n");
-                        ism330dhcx_write_register(g_ism330dhcx_list, 0x09, 0x33);
-                        break;
-                case 833:
-                        sninfo("ioctl: FIFO BATCH_RATE: 833Hz\n");
-                        ism330dhcx_write_register(g_ism330dhcx_list, 0x09, 0x77);
-                        break;
-                default:
-                        snerr("ERROR: Unrecognized arg: %d\n", arg);
-                        ret = -ENOTTY;
-                        break;
-                }
-                break;
-
+        	sninfo("ioctl: FIFO is not used\n");
+            ism330dhcx_write_register(g_ism330dhcx_list, 0x09, 0x00 | read_data);
+            break;
+        case 12:
+     	    sninfo("ioctl: FIFO BATCH_RATE: 12.5Hz\n");
+            ism330dhcx_write_register(g_ism330dhcx_list, 0x09, 0x11 | read_data);
+            break;
+        case 52:
+            sninfo("ioctl: FIFO BATCH_RATE: 52Hz\n");
+            ism330dhcx_write_register(g_ism330dhcx_list, 0x09, 0x33 | read_data);
+            break;
+     	case 833:
+       	    sninfo("ioctl: FIFO BATCH_RATE: 833Hz\n");
+      	    ism330dhcx_write_register(g_ism330dhcx_list, 0x09, 0x77 | read_data);
+     	    break;
+  	    default:
+            snerr("ERROR: Unrecognized arg: %d\n", arg);
+            ret = -ENOTTY;
+            break;
+        }
+        break;
 	
 	/* Command was not recognized */
     default:
@@ -889,11 +895,11 @@ int ism330dhcx_register(
   SPI_SETFREQUENCY(spi, ISM330DHCX_SPI_FREQUENCY);
 
   /* Attach the interrupt handler */
-  //ret = priv->config->attach(priv->config, &ism330dhcx_interrupt_handler);
-  //if (ret < 0) {
-  //  snerr("ERROR: Failed to attach interrupt\n");
-  //  return -ENODEV;
-  //}
+  ret = priv->config->attach(priv->config, &ism330dhcx_interrupt_handler);
+  if (ret < 0) {
+    snerr("ERROR: Failed to attach interrupt\n");
+    return -ENODEV;
+  }
 
   /* Register the character driver */
   ret = register_driver(devpath, &g_ism330dhcx_fops, 0666, priv);

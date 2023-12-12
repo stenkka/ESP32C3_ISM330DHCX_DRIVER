@@ -360,6 +360,6 @@
 * Argument:     Batch rate.
 * Note:         If setting data rate failed, a negated errno va    lue is
 *               returned, otherwise, OK is returned.
-
+*/
 
 #endif /* __INCLUDE_NUTTX_SENSORS_IOCTL_H */
