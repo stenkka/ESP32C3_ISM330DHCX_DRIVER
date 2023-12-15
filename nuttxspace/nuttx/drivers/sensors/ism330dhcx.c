@@ -36,6 +36,7 @@
 #include <nuttx/sensors/ism330dhcx.h>
 #include <nuttx/sensors/ioctl.h>
 #include <nuttx/wqueue.h>
+#include <nuttx/ioexpander/gpio.h>
 
 #if defined(CONFIG_SPI) && defined(CONFIG_SENSORS_ISM330DHCX)
 
@@ -68,14 +69,8 @@ struct ism330dhcx_dev_s
                                         * retrieving the data from the
                                         * sensor after the arrival of new
                                         * data was signalled in an interrupt */
-  uint8_t isConfigured;
-};
-
-struct ism330dhcx_sensor_data_ring_buffer
-{
-	int16_t* data;
-	uint8_t index;
-	uint8_t num;
+  volatile struct ism330dhcx_fifo_record_t* fifo_record_buffer;  
+  uint8_t is_configured;
 };
 
 /****************************************************************************
@@ -107,6 +102,8 @@ static void ism330dhcx_read_temperature(
   FAR struct ism330dhcx_dev_s *dev,
   uint16_t * temperature);
 static int ism330dhcx_interrupt_handler(
+  int irq, FAR void *context);
+static int ism330dhcx_int_handler(
   int irq, FAR void *context);
 static void ism330dhcx_worker(
   FAR void *arg);
@@ -435,6 +432,71 @@ static int ism330dhcx_interrupt_handler(int irq, FAR void *context)
 }
 
 /****************************************************************************
+* Name: ism330dhcx_int_handler
+****************************************************************************/
+
+static int ism330dhcx_int_handler(int irq, FAR void *context)
+{
+  struct ism330dhcx_dev_s *priv = 0;
+  priv = g_ism330dhcx_list; 
+
+  uint8_t* fifo_data_out_tag = NULL;
+  uint8_t* tag_sensor = NULL;
+
+  /* Lock the SPI bus so that only one device
+   * can access it at the same time
+   */
+  SPI_LOCK(priv->spi, true);
+ 
+  /* Set CS to low which selects the ISM330DHCX */
+  SPI_SELECT(priv->spi, priv->config->spi_devid, true);
+
+  /* Transmit the register address from where we want to start reading
+   * 0x80 -> MSB is set
+   *   -> Read Indication
+   */
+
+  SPI_SEND(priv->spi, (0x78 | 0x80));
+
+  for (int i = 0;i<FIFO_RECORD_BUFFER_SAMPLES;i++)
+  {
+    /* First we read the tag */
+    *fifo_data_out_tag  = SPI_SEND(priv->spi, 0);    /* FIFO_DATA_OUT_TAG */
+    *tag_sensor = *fifo_data_out_tag >> 4;		    /* TAG_SENSOR_[4:0]  */
+    
+    if (*tag_sensor == 0x00)
+    {
+        /* FIFO empty? */
+        return 0;
+    }
+
+    /* Write the tag_sensor to the record buffer */
+    priv->fifo_record_buffer[i].TAG = *tag_sensor;
+
+    
+    SPI_SEND(priv->spi, (0x79 | 0x80));
+
+    /* Read the FIFO data */
+    priv->fifo_record_buffer[i].DATA_X  = ((uint16_t) (SPI_SEND(priv->spi, 0)) << 0);    /* FIFO_DATA_OUT_X_L */
+    priv->fifo_record_buffer[i].DATA_X |= ((uint16_t) (SPI_SEND(priv->spi, 0)) << 8);    /* FIFO_DATA_OUT_X_H */
+    
+    priv->fifo_record_buffer[i].DATA_Y  = ((uint16_t) (SPI_SEND(priv->spi, 0)) << 0);    /* FIFO_DATA_OUT_Y_L */
+    priv->fifo_record_buffer[i].DATA_Y |= ((uint16_t) (SPI_SEND(priv->spi, 0)) << 8);    /* FIFO_DATA_OUT_Y_H */
+    
+    priv->fifo_record_buffer[i].DATA_Z  = ((uint16_t) (SPI_SEND(priv->spi, 0)) << 0);    /* FIFO_DATA_OUT_Z_L */
+    priv->fifo_record_buffer[i].DATA_Z |= ((uint16_t) (SPI_SEND(priv->spi, 0)) << 8);    /* FIFO_DATA_OUT_Z_H */
+  }
+
+  /* Set CS to high which deselects the ISM330DHCX */
+  SPI_SELECT(priv->spi, priv->config->spi_devid, false);
+
+  /* Unlock the SPI bus */
+  SPI_LOCK(priv->spi, false);
+
+  return 0;
+}
+
+/****************************************************************************
  * Name: ism330dhcx_worker
  ****************************************************************************/
 
@@ -578,9 +640,13 @@ static int ism330dhcx_open(FAR struct file *filep)
 		return -ENODEV;
 	}
 
-	if (!priv->isConfigured)
+	if (!priv->is_configured)
 	{
-		ism330dhcx_configure_default(priv);
+		if (ism330dhcx_init() == -1)
+        {
+            snerr("Could not initialize ism330dhcx!\n");
+            return -ENODEV;
+        }
 	}
 
   	reg_content = 0;
@@ -620,33 +686,55 @@ static ssize_t ism330dhcx_read(
 {
   FAR struct inode *inode = filep->f_inode;
   FAR struct ism330dhcx_dev_s *priv = inode->i_private;
-  FAR struct ism330dhcx_sensor_data_s *data;
-  int ret;
+  FAR struct ism330dhcx_fifo_record_t *data;
+  //int ret;
 
   DEBUGASSERT(priv != NULL);
 
   /* Check if enough memory was provided for the read call */
-
+  /*
   if (buflen < sizeof(FAR struct ism330dhcx_sensor_data_s))
     {
       snerr("ERROR: "
             "Not enough memory for reading out a sensor data sample\n");
       return -ENOSYS;
     }
+  */
 
-  ism330dhcx_read_measurement_data(priv);
+  // check if buflen is multiple of a record size
+  if (buflen % sizeof(struct ism330dhcx_fifo_record_t))
+  {
+     snerr("buflen not multiple of sizeof struct ism330dhcx_fifo_record_t!\n");
+	 return -ENODEV;
+  }
+	
+  data = (FAR struct ism330dhcx_fifo_record_t *)buffer;
+
+  memset(data, 0, sizeof(struct ism330dhcx_fifo_record_t));
+
+  // read number of records specified by app to application buffer from driver buffer
+  uint16_t number_of_reads;
+  for (number_of_reads = 0;number_of_reads<buflen/(sizeof(struct ism330dhcx_fifo_record_t));number_of_reads++)
+  {
+     if (priv->fifo_record_buffer[number_of_reads].TAG != 0x00) // Checks that the driver buffer's record is not empty
+	 {
+        data[number_of_reads] = priv->fifo_record_buffer[number_of_reads];
+     }
+  }
+
+  //ism330dhcx_read_measurement_data(priv);
 
   /* Acquire the semaphore before the data is copied */
-
+  /*
   ret = nxsem_wait(&priv->datasem);
   if (ret < 0)
     {
       snerr("ERROR: Could not acquire priv->datasem: %d\n", ret);
       return ret;
     }
-
+  */
   /* Copy the sensor data into the buffer */
-
+  /*
   data = (FAR struct ism330dhcx_sensor_data_s *)buffer;
   memset(data, 0, sizeof(FAR struct ism330dhcx_sensor_data_s));
 
@@ -657,12 +745,12 @@ static ssize_t ism330dhcx_read(
   data->y_gyro = priv->data.y_gyro;
   data->z_gyro = priv->data.z_gyro;
   data->temperature = priv->data.temperature;
-
+  */
   /* Give back the semaphore */
 
-  nxsem_post(&priv->datasem);
+  //nxsem_post(&priv->datasem);
 
-  return sizeof(FAR struct ism330dhcx_sensor_data_s);
+  return number_of_reads*sizeof(FAR struct ism330dhcx_fifo_record_t);
 }
 
 /****************************************************************************
@@ -884,9 +972,6 @@ static int ism330dhcx_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
             break;
         }
         break;
-
-
-	
 	/* Command was not recognized */
     default:
     	snerr("ERROR: Unrecognized cmd: %d\n", cmd);
@@ -935,7 +1020,7 @@ int ism330dhcx_register(
           kmm_malloc(sizeof(struct ism330dhcx_config_s));
   config->spi_devid = 2;
   config->irq = 0;
-  config->attach = NULL;
+  //config->attach = NULL;
 
   /* Initialize the ISM330DHCX device structure */
   priv = (FAR struct ism330dhcx_dev_s *)
@@ -949,24 +1034,27 @@ int ism330dhcx_register(
   priv->config = config;
   priv->work.worker = NULL;
 
-  priv->isConfigured = 0;
+  priv->is_configured = 0;
 
   nxsem_init(&priv->datasem, 0, 1);  /* Initialize sensor data access
                                       * semaphore */
+
+  /* Initialize the driver's internal sensor data buffer */
+  priv->fifo_record_buffer = (struct ism330dhcx_fifo_record_t *)kmm_malloc(FIFO_RECORD_BUFFER_SAMPLES*sizeof(struct ism330dhcx_fifo_record_t));
 
   /* Setup SPI frequency and mode */
   SPI_SETMODE(spi, ISM330DHCX_SPI_MODE);
   SPI_SETBITS(spi, 8);
   SPI_HWFEATURES(spi, 0);
   SPI_SETFREQUENCY(spi, ISM330DHCX_SPI_FREQUENCY);
-
+  sninfo("ATTACHING HANDLER...\n");
   /* Attach the interrupt handler */
-  ret = priv->config->attach(priv->config, &ism330dhcx_interrupt_handler);
+  ret = priv->config->attach(priv->config, &ism330dhcx_int_handler);
   if (ret < 0) {
     snerr("ERROR: Failed to attach interrupt\n");
     return -ENODEV;
   }
-
+  sninfo("ATTACHED HANDLER.\n");
   /* Register the character driver */
   ret = register_driver(devpath, &g_ism330dhcx_fops, 0666, priv);
   if (ret < 0) {
@@ -997,111 +1085,12 @@ int ism330dhcx_register(
   *   Zero (OK) on success; a negated errno value on failure.
 *************************************************************    ****************/
 
-int ism330dhcx_configure_default(struct ism330dhcx_dev_s* priv)
-{
-	if (!priv)
-	{
-		snerr("ism330dhcx_dev_s is null!\n");
-		return -ENODEV;
-	}
-
-	/* Perform a reset */
- 	ism330dhcx_reset(priv);
-
-  	ism330dhcx_write_register(priv, 0x01, 0x00);
-  	ism330dhcx_write_register(priv, 0x02, 0x3F);
-	// FIFO treshold: 6 slots (sensor data + TAG)
-  	ism330dhcx_write_register(priv, 0x07, 0x3F);
-  	ism330dhcx_write_register(priv, 0x08, 0x00);
-  	ism330dhcx_write_register(priv, 0x09, 0x77);
-  	// Enable continuous-FIFO mode (FIFO data is rewritten as new samples come in)
-	ism330dhcx_write_register(priv, 0x0A, 0x56);
-  	ism330dhcx_write_register(priv, 0x0B, 0x00);
-  	ism330dhcx_write_register(priv, 0x0C, 0x00);
-	// Enable FIFO threshold interrupt on pin INT1
-	ism330dhcx_write_register(priv, 0x0D, 0x08);
-	ism330dhcx_write_register(priv, 0x0E, 0x00);
-
-	// Accelerometer ODR (sampling rate)
-
-	#ifdef CONFIG_ISM330DHCX_ACC_ODR__1_6
-	ism330dhcx_write_register(priv, 0x10, 0xB0);
-	sninfo("Accelerometer ODR: 1.6Hz\n");
-	#endif
-
-	#ifdef CONFIG_ISM330DHCX_ACC_ODR__52
-	sninfo("Accelerometer ODR: 52Hz\n");
-	ism330dhcx_write_register(priv, 0x10, 0x30);
-	#endif
-
-	#ifdef CONFIG_ISM330DHCX_ACC_ODR__833
-	sninfo("Accelerometer ODR: 833Hz\n");
-	ism330dhcx_write_register(priv, 0x10, 0x70);
-	#endif
-
-	#ifdef CONFIG_ISM330DHCX_ACC_ODR__6660
-	sninfo("Accelerometer ODR: 6.66kHz\n");
-	ism330dhcx_write_register(priv, 0x10, 0xA0);
-	#endif
-
-	//Gyroscope ODR (sampling rate)
-
-   	#ifdef CONFIG_ISM330DHCX_GYRO_ODR__52
-	sninfo("Gyroscope ODR: 52Hz\n");
-    ism330dhcx_write_register(priv, 0x11, 0x30);
-	#endif
-
-	#ifdef CONFIG_ISM330DHCX_GYRO_ODR__833
-	sninfo("Gyroscope ODR: 833Hz\n");
-  	ism330dhcx_write_register(priv, 0x11, 0x70);
-   	#endif
-
-  	#ifdef CONFIG_ISM330DHCX_GYRO_ODR__6660
-  	sninfo("Gyroscope ODR: 6.66kHz\n");
-   	ism330dhcx_write_register(priv, 0x11, 0xA0);
-   	#endif
-
-
-
-  	ism330dhcx_write_register(priv, 0x12, 0x04);
-  	ism330dhcx_write_register(priv, 0x13, 0x00);
-  	ism330dhcx_write_register(priv, 0x14, 0x00);
-  	ism330dhcx_write_register(priv, 0x15, 0x00);
-  	ism330dhcx_write_register(priv, 0x16, 0x00);
-  	ism330dhcx_write_register(priv, 0x17, 0x00);
-  	ism330dhcx_write_register(priv, 0x18, 0xE2);
-  	ism330dhcx_write_register(priv, 0x19, 0x20);
-  	ism330dhcx_write_register(priv, 0x56, 0x00);
-  	ism330dhcx_write_register(priv, 0x57, 0x00);
-  	ism330dhcx_write_register(priv, 0x58, 0x00);
-  	ism330dhcx_write_register(priv, 0x59, 0x00);
-  	ism330dhcx_write_register(priv, 0x5A, 0x00);
-  	ism330dhcx_write_register(priv, 0x5B, 0x00);
-  	ism330dhcx_write_register(priv, 0x5C, 0x00);
-  	ism330dhcx_write_register(priv, 0x5D, 0x00);
-  	ism330dhcx_write_register(priv, 0x5E, 0x00);
-  	ism330dhcx_write_register(priv, 0x5F, 0x00);
-  	ism330dhcx_write_register(priv, 0x73, 0x00);
-  	ism330dhcx_write_register(priv, 0x74, 0x00);
-  	ism330dhcx_write_register(priv, 0x75, 0x00);
-
-	priv->isConfigured = 1;
-
-	return 0;
-}
-
 int ism330dhcx_init()
 {
-	//struct ism330dhcx_dev_s* priv = g_ism330dhcx_list;
-
-	//sninfo("spidevid: %d\n", priv->config->spi_devid);
-
-	// return -1 on memory allocation error
 	DEBUGASSERT(g_ism330dhcx_list != NULL);
 	if (!g_ism330dhcx_list)
 	{
-		snerr("No ism330dhcx_dev_s structs found in g_ism330dhcx_list!\n");
-		return 0;	// Spec: "Ignore but log errors"
+		return -1;
 	}
 	
 	/* Perform a reset */
@@ -1162,8 +1151,6 @@ int ism330dhcx_init()
    	ism330dhcx_write_register(g_ism330dhcx_list, 0x11, 0xA0);
    	#endif
 
-
-
   	ism330dhcx_write_register(g_ism330dhcx_list, 0x12, 0x04);
   	ism330dhcx_write_register(g_ism330dhcx_list, 0x13, 0x00);
   	ism330dhcx_write_register(g_ism330dhcx_list, 0x14, 0x00);
@@ -1188,7 +1175,7 @@ int ism330dhcx_init()
 
 	sninfo("ism330dhcx initialized\n");
 
-	g_ism330dhcx_list->isConfigured = 1;
+	g_ism330dhcx_list->is_configured = 1;
 
 	return 0;
 }

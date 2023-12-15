@@ -372,7 +372,7 @@ else
 {
 	if(ism330dhcx_init() == -1)
 	{
-		syslog(LOG_ERR, "Failed to init (ism330dhcx_init()) /dev/ism    330dhcx driver\n");
+		syslog(LOG_ERR, "Failed to init (ism330dhcx_init()) /dev/ism330dhcx driver\n");
 	}
 }
 #endif

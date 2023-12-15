@@ -34,8 +34,9 @@
 
 /****************************************************************************
  * Pre-processor Definitions
- ****************************************************************************/
-
+ ***************************************************************************/
+/* number of records in driver's fifo record buffer*/
+#define FIFO_RECORD_BUFFER_SAMPLES 32
 /* ISM330DHCX Register Definitions *********************************************/
 
 #define ISM330DHCX_WHO_AM_I_REG    (0x0F)
@@ -123,6 +124,15 @@ struct ism330dhcx_config_s
   int (*attach)(FAR struct ism330dhcx_config_s *, xcpt_t);
 };
 
+
+struct ism330dhcx_fifo_record_t
+{
+	uint8_t TAG;
+	uint16_t DATA_X;
+	uint16_t DATA_Y;
+	uint16_t DATA_Z;
+};
+
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
@@ -156,8 +166,8 @@ extern "C"
 int ism330dhcx_register(
   FAR const char *devpath, 
   FAR struct spi_dev_s *spi);
-
-int ism330dhcx_init();
+  
+int ism330dhcx_init(void);
 
 #undef EXTERN
 #ifdef __cplusplus
