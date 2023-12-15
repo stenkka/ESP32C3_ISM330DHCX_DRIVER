@@ -36,7 +36,6 @@
 #include <nuttx/sensors/ism330dhcx.h>
 #include <nuttx/sensors/ioctl.h>
 #include <nuttx/wqueue.h>
-#include <nuttx/ioexpander/gpio.h>
 
 #if defined(CONFIG_SPI) && defined(CONFIG_SENSORS_ISM330DHCX)
 
@@ -687,19 +686,10 @@ static ssize_t ism330dhcx_read(
   FAR struct inode *inode = filep->f_inode;
   FAR struct ism330dhcx_dev_s *priv = inode->i_private;
   FAR struct ism330dhcx_fifo_record_t *data;
-  //int ret;
+  int ret;
 
   DEBUGASSERT(priv != NULL);
 
-  /* Check if enough memory was provided for the read call */
-  /*
-  if (buflen < sizeof(FAR struct ism330dhcx_sensor_data_s))
-    {
-      snerr("ERROR: "
-            "Not enough memory for reading out a sensor data sample\n");
-      return -ENOSYS;
-    }
-  */
 
   // check if buflen is multiple of a record size
   if (buflen % sizeof(struct ism330dhcx_fifo_record_t))
@@ -707,7 +697,15 @@ static ssize_t ism330dhcx_read(
      snerr("buflen not multiple of sizeof struct ism330dhcx_fifo_record_t!\n");
 	 return -ENODEV;
   }
-	
+
+  /* Acquire the semaphore before the data is copied */
+  ret = nxsem_wait(&priv->datasem);
+  if (ret < 0)
+  {
+    snerr("ERROR: Could not acquire priv->datasem: %d\n", ret);
+    return ret;
+  }
+
   data = (FAR struct ism330dhcx_fifo_record_t *)buffer;
 
   memset(data, 0, sizeof(struct ism330dhcx_fifo_record_t));
@@ -722,33 +720,8 @@ static ssize_t ism330dhcx_read(
      }
   }
 
-  //ism330dhcx_read_measurement_data(priv);
-
-  /* Acquire the semaphore before the data is copied */
-  /*
-  ret = nxsem_wait(&priv->datasem);
-  if (ret < 0)
-    {
-      snerr("ERROR: Could not acquire priv->datasem: %d\n", ret);
-      return ret;
-    }
-  */
-  /* Copy the sensor data into the buffer */
-  /*
-  data = (FAR struct ism330dhcx_sensor_data_s *)buffer;
-  memset(data, 0, sizeof(FAR struct ism330dhcx_sensor_data_s));
-
-  data->x_acc = priv->data.x_acc;
-  data->y_acc = priv->data.y_acc;
-  data->z_acc = priv->data.z_acc;
-  data->x_gyro = priv->data.x_gyro;
-  data->y_gyro = priv->data.y_gyro;
-  data->z_gyro = priv->data.z_gyro;
-  data->temperature = priv->data.temperature;
-  */
   /* Give back the semaphore */
-
-  //nxsem_post(&priv->datasem);
+  nxsem_post(&priv->datasem);
 
   return number_of_reads*sizeof(FAR struct ism330dhcx_fifo_record_t);
 }
