@@ -29,6 +29,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#define CONFIG_IOEXPANDER_INT_ENABLE 1
+
 #ifdef CONFIG_IOEXPANDER
 
 /****************************************************************************

@@ -28,6 +28,7 @@
 #include <errno.h>
 #include <debug.h>
 #include <string.h>
+#include <stdio.h>
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/random.h>
@@ -36,6 +37,10 @@
 #include <nuttx/sensors/ism330dhcx.h>
 #include <nuttx/sensors/ioctl.h>
 #include <nuttx/wqueue.h>
+#include <nuttx/irq.h>
+#include <nuttx/ioexpander/ioexpander.h>
+#include <fcntl.h>
+#include <sys/ioctl.h>
 
 #if defined(CONFIG_SPI) && defined(CONFIG_SENSORS_ISM330DHCX)
 
@@ -70,6 +75,8 @@ struct ism330dhcx_dev_s
                                         * data was signalled in an interrupt */
   volatile struct ism330dhcx_fifo_record_t* fifo_record_buffer;  
   uint8_t is_configured;
+  bool irqenabled;
+  struct ioexpander_dev_s *ioe;
 };
 
 /****************************************************************************
@@ -102,8 +109,7 @@ static void ism330dhcx_read_temperature(
   uint16_t * temperature);
 static int ism330dhcx_interrupt_handler(
   int irq, FAR void *context);
-static int ism330dhcx_int_handler(
-  int irq, FAR void *context);
+static int ism330dhcx_int_handler(int irq, FAR void *context, FAR void *arg);
 static void ism330dhcx_worker(
   FAR void *arg);
 
@@ -434,7 +440,7 @@ static int ism330dhcx_interrupt_handler(int irq, FAR void *context)
 * Name: ism330dhcx_int_handler
 ****************************************************************************/
 
-static int ism330dhcx_int_handler(int irq, FAR void *context)
+static int ism330dhcx_int_handler(int irq, FAR void *context, FAR void *arg)
 {
   struct ism330dhcx_dev_s *priv = 0;
   priv = g_ism330dhcx_list; 
@@ -651,7 +657,7 @@ static int ism330dhcx_open(FAR struct file *filep)
   	reg_content = 0;
   	ism330dhcx_read_register(priv, 0x0F, &reg_content);
 
-  	//spiinfo("STATUS_REG = %04x (expected 6B)\n", reg_content);
+  	spiinfo("STATUS_REG = %04x (expected 6B)\n", reg_content);
 	if(reg_content != 0x6b) {return -ENODEV;}	// check WHO_AM_I register
 
 	return OK;
@@ -1015,27 +1021,44 @@ int ism330dhcx_register(
   /* Initialize the driver's internal sensor data buffer */
   priv->fifo_record_buffer = (struct ism330dhcx_fifo_record_t *)kmm_malloc(FIFO_RECORD_BUFFER_SAMPLES*sizeof(struct ism330dhcx_fifo_record_t));
 
+  priv->ioe = (struct ioexpander_dev_s *)kmm_malloc(sizeof(struct ioexpander_dev_s));
+
+
   /* Setup SPI frequency and mode */
   SPI_SETMODE(spi, ISM330DHCX_SPI_MODE);
   SPI_SETBITS(spi, 8);
   SPI_HWFEATURES(spi, 0);
   SPI_SETFREQUENCY(spi, ISM330DHCX_SPI_FREQUENCY);
-  sninfo("ATTACHING HANDLER...\n");
-  /* Attach the interrupt handler */
-  ret = priv->config->attach(priv->config, &ism330dhcx_int_handler);
-  if (ret < 0) {
-    snerr("ERROR: Failed to attach interrupt\n");
-    return -ENODEV;
-  }
-  sninfo("ATTACHED HANDLER.\n");
+
   /* Register the character driver */
   ret = register_driver(devpath, &g_ism330dhcx_fops, 0666, priv);
   if (ret < 0) {
     snerr("ERROR: Failed to register driver: %d\n", ret);
-    kmm_free(priv);
     nxsem_destroy(&priv->datasem);
+    kmm_free(priv);
     return -ENODEV;
   }
+
+  /* Attach the interrupt handler */
+  int fd2 = open("/dev/gpio2", O_RDWR);
+  sninfo("Attaching handler..\n");
+  irq_attach(17, ism330dhcx_int_handler, NULL);
+  struct sigevent notify;
+  ret = ioctl(fd2, _GPIOC(4), (unsigned long)&notify);
+            if (ret < 0)
+                {
+                  int errcode = errno;
+
+                  fprintf(stderr,
+                          "ERROR: Failed to setup for signal from %s: %d\n",
+                          devpath, errcode);
+
+                  close(fd2);
+                  return EXIT_FAILURE;
+                }
+  sninfo("Attached handler\n");
+
+
 
   /* Since we support multiple ISM330DHCX devices are supported, we will need to
    * add this new instance to a list of device instances so that it can be
