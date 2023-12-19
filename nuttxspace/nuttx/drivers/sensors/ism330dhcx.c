@@ -75,8 +75,6 @@ struct ism330dhcx_dev_s
                                         * data was signalled in an interrupt */
   volatile struct ism330dhcx_fifo_record_t* fifo_record_buffer;  
   uint8_t is_configured;
-  bool irqenabled;
-  struct ioexpander_dev_s *ioe;
 };
 
 /****************************************************************************
@@ -1020,9 +1018,6 @@ int ism330dhcx_register(
 
   /* Initialize the driver's internal sensor data buffer */
   priv->fifo_record_buffer = (struct ism330dhcx_fifo_record_t *)kmm_malloc(FIFO_RECORD_BUFFER_SAMPLES*sizeof(struct ism330dhcx_fifo_record_t));
-
-  priv->ioe = (struct ioexpander_dev_s *)kmm_malloc(sizeof(struct ioexpander_dev_s));
-
 
   /* Setup SPI frequency and mode */
   SPI_SETMODE(spi, ISM330DHCX_SPI_MODE);
