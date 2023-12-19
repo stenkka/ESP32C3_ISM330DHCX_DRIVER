@@ -898,7 +898,7 @@ static int ism330dhcx_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
         case SNIOC_SET_FIFO_BATCH_RATE_ACC:
         	ism330dhcx_read_register(g_ism330dhcx_list, 0x09, &read_data);
-                read_data &= 0x0F;
+            read_data &= 0x0F;
         switch (arg)
         {
                 case 0:
@@ -931,17 +931,17 @@ static int ism330dhcx_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
             read_data |= 0xCF;
         switch (arg)
         {
-                case 0:
-                sninfo("ioctl: FIFO is not used\n");
+            case 0:
+            sninfo("ioctl: FIFO is not used\n");
             ism330dhcx_write_register(g_ism330dhcx_list, 0x0A, 0x00 | read_data);
             break;
         case 12:
             sninfo("ioctl: FIFO BATCH_RATE: 12.5Hz\n");
-            ism330dhcx_write_register(g_ism330dhcx_list, 0x09, 0x20 | read_data);
+            ism330dhcx_write_register(g_ism330dhcx_list, 0x0A, 0x20 | read_data);
             break;
         case 52:
             sninfo("ioctl: FIFO BATCH_RATE: 52Hz\n");
-            ism330dhcx_write_register(g_ism330dhcx_list, 0x09, 0x30 | read_data);
+            ism330dhcx_write_register(g_ism330dhcx_list, 0x0A, 0x30 | read_data);
             break;
             default:
             snerr("ERROR: Unrecognized arg: %d\n", arg);
